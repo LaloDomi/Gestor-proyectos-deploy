@@ -1,51 +1,43 @@
-const { sql, poolPromise } = require("../config/db");
+const { pool } = require("../config/db");
 
 class RolModel {
   static async getAll() {
-    const pool = await poolPromise;
-    const result = await pool.request().query("SELECT * FROM Roles ORDER BY id_rol");
-    return result.recordset;
+    const result = await pool.query(
+      "SELECT * FROM Roles ORDER BY id_rol"
+    );
+    return result.rows;
   }
 
   static async getById(id) {
-    const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .input("id_rol", sql.Int, id)
-      .query("SELECT * FROM Roles WHERE id_rol = @id_rol");
-    return result.recordset[0];
+    const result = await pool.query(
+      "SELECT * FROM Roles WHERE id_rol = $1",
+      [id]
+    );
+    return result.rows[0];
   }
 
   static async create({ nombre_rol }) {
-    const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .input("nombre_rol", sql.VarChar(50), nombre_rol)
-      .query(
-        "INSERT INTO Roles (nombre_rol) OUTPUT INSERTED.* VALUES (@nombre_rol)"
-      );
-    return result.recordset[0];
+    const result = await pool.query(
+      "INSERT INTO Roles (nombre_rol) VALUES ($1) RETURNING *",
+      [nombre_rol]
+    );
+    return result.rows[0];
   }
 
   static async update(id, { nombre_rol }) {
-    const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .input("id_rol", sql.Int, id)
-      .input("nombre_rol", sql.VarChar(50), nombre_rol)
-      .query(
-        "UPDATE Roles SET nombre_rol = @nombre_rol OUTPUT INSERTED.* WHERE id_rol = @id_rol"
-      );
-    return result.recordset[0];
+    const result = await pool.query(
+      "UPDATE Roles SET nombre_rol = $1 WHERE id_rol = $2 RETURNING *",
+      [nombre_rol, id]
+    );
+    return result.rows[0];
   }
 
   static async remove(id) {
-    const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .input("id_rol", sql.Int, id)
-      .query("DELETE FROM Roles OUTPUT DELETED.* WHERE id_rol = @id_rol");
-    return result.recordset[0];
+    const result = await pool.query(
+      "DELETE FROM Roles WHERE id_rol = $1 RETURNING *",
+      [id]
+    );
+    return result.rows[0];
   }
 }
 

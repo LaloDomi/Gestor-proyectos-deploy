@@ -1,51 +1,43 @@
-const { sql, poolPromise } = require("../config/db");
+const { pool } = require("../config/db");
 
 class EstadoModel {
   static async getAll() {
-    const pool = await poolPromise;
-    const result = await pool.request().query("SELECT * FROM Estados ORDER BY id_estado");
-    return result.recordset;
+    const result = await pool.query(
+      "SELECT * FROM Estados ORDER BY id_estado"
+    );
+    return result.rows;
   }
 
   static async getById(id) {
-    const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .input("id_estado", sql.Int, id)
-      .query("SELECT * FROM Estados WHERE id_estado = @id_estado");
-    return result.recordset[0];
+    const result = await pool.query(
+      "SELECT * FROM Estados WHERE id_estado = $1",
+      [id]
+    );
+    return result.rows[0];
   }
 
   static async create({ nombre_estado }) {
-    const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .input("nombre_estado", sql.VarChar(50), nombre_estado)
-      .query(
-        "INSERT INTO Estados (nombre_estado) OUTPUT INSERTED.* VALUES (@nombre_estado)"
-      );
-    return result.recordset[0];
+    const result = await pool.query(
+      "INSERT INTO Estados (nombre_estado) VALUES ($1) RETURNING *",
+      [nombre_estado]
+    );
+    return result.rows[0];
   }
 
   static async update(id, { nombre_estado }) {
-    const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .input("id_estado", sql.Int, id)
-      .input("nombre_estado", sql.VarChar(50), nombre_estado)
-      .query(
-        "UPDATE Estados SET nombre_estado = @nombre_estado OUTPUT INSERTED.* WHERE id_estado = @id_estado"
-      );
-    return result.recordset[0];
+    const result = await pool.query(
+      "UPDATE Estados SET nombre_estado = $1 WHERE id_estado = $2 RETURNING *",
+      [nombre_estado, id]
+    );
+    return result.rows[0];
   }
 
   static async remove(id) {
-    const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .input("id_estado", sql.Int, id)
-      .query("DELETE FROM Estados OUTPUT DELETED.* WHERE id_estado = @id_estado");
-    return result.recordset[0];
+    const result = await pool.query(
+      "DELETE FROM Estados WHERE id_estado = $1 RETURNING *",
+      [id]
+    );
+    return result.rows[0];
   }
 }
 

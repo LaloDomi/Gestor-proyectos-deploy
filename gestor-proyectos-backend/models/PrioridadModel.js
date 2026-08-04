@@ -1,51 +1,43 @@
-const { sql, poolPromise } = require("../config/db");
+const { pool } = require("../config/db");
 
 class PrioridadModel {
   static async getAll() {
-    const pool = await poolPromise;
-    const result = await pool.request().query("SELECT * FROM Prioridades ORDER BY id_prioridad");
-    return result.recordset;
+    const result = await pool.query(
+      "SELECT * FROM Prioridades ORDER BY id_prioridad"
+    );
+    return result.rows;
   }
 
   static async getById(id) {
-    const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .input("id_prioridad", sql.Int, id)
-      .query("SELECT * FROM Prioridades WHERE id_prioridad = @id_prioridad");
-    return result.recordset[0];
+    const result = await pool.query(
+      "SELECT * FROM Prioridades WHERE id_prioridad = $1",
+      [id]
+    );
+    return result.rows[0];
   }
 
   static async create({ nombre_prioridad }) {
-    const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .input("nombre_prioridad", sql.VarChar(50), nombre_prioridad)
-      .query(
-        "INSERT INTO Prioridades (nombre_prioridad) OUTPUT INSERTED.* VALUES (@nombre_prioridad)"
-      );
-    return result.recordset[0];
+    const result = await pool.query(
+      "INSERT INTO Prioridades (nombre_prioridad) VALUES ($1) RETURNING *",
+      [nombre_prioridad]
+    );
+    return result.rows[0];
   }
 
   static async update(id, { nombre_prioridad }) {
-    const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .input("id_prioridad", sql.Int, id)
-      .input("nombre_prioridad", sql.VarChar(50), nombre_prioridad)
-      .query(
-        "UPDATE Prioridades SET nombre_prioridad = @nombre_prioridad OUTPUT INSERTED.* WHERE id_prioridad = @id_prioridad"
-      );
-    return result.recordset[0];
+    const result = await pool.query(
+      "UPDATE Prioridades SET nombre_prioridad = $1 WHERE id_prioridad = $2 RETURNING *",
+      [nombre_prioridad, id]
+    );
+    return result.rows[0];
   }
 
   static async remove(id) {
-    const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .input("id_prioridad", sql.Int, id)
-      .query("DELETE FROM Prioridades OUTPUT DELETED.* WHERE id_prioridad = @id_prioridad");
-    return result.recordset[0];
+    const result = await pool.query(
+      "DELETE FROM Prioridades WHERE id_prioridad = $1 RETURNING *",
+      [id]
+    );
+    return result.rows[0];
   }
 }
 
