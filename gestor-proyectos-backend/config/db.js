@@ -8,14 +8,15 @@ const pool = new Pool({
   },
 });
 
-pool
+const poolPromise = pool
   .connect()
   .then((client) => {
     console.log("✅ Conectado a Supabase PostgreSQL");
     client.release();
-  })
-  .catch((err) => {
-    console.error("❌ Error al conectar con Supabase:", err.message);
+    return pool;
   });
 
-module.exports = pool;
+module.exports = {
+  pool,
+  poolPromise,
+};
