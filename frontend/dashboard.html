@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Panel — ProjectFlow</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar-slot"></aside>
+    <div class="main">
+      <header class="topbar" id="topbar-slot"></header>
+      <div class="page" id="page-slot"></div>
+    </div>
+  </div>
+  <script src="api.js"></script>
+  <script src="auth.js"></script>
+  <script src="common.js"></script>
+  <script>
+    const user = requireAuth();
+    if (user) {
+      initShell("dashboard", "Panel", "Hola de nuevo, " + user.nombre.split(" ")[0]);
+      refreshSidebarBadge("dashboard");
+      const pageSlot = document.getElementById("page-slot");
+      pageSlot.innerHTML = loadingHTML("Cargando tu panel…");
+
+      (async () => {
+        try {
+          const [proyectos, avanceList, tareas, estadoStats] = await Promise.all([
+            api.proyectos.getAll(),
+            api.proyectos.getAvance(),
+            api.tareas.getAll(),
+            api.tareas.contarPorEstado(),
+          ]);
+          pageSlot.innerHTML = dashboardPageHTML({ proyectos, avanceList, tareas, estadoStats });
+        } catch (err) {
+          pageSlot.innerHTML = errorHTML(err);
+        }
+      })();
+    }
+  </script>
+</body>
+</html>

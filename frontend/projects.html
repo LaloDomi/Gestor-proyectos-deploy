@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Proyectos — ProjectFlow</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar-slot"></aside>
+    <div class="main">
+      <header class="topbar" id="topbar-slot"></header>
+      <div class="page" id="page-slot"></div>
+    </div>
+  </div>
+  <script src="api.js"></script>
+  <script src="auth.js"></script>
+  <script src="common.js"></script>
+  <script>
+    const user = requireAuth();
+    let ESTADOS = [], USUARIOS = [], PROYECTOS = [], AVANCE = [], TAREAS = [];
+
+    async function loadProjects() {
+      const pageSlot = document.getElementById("page-slot");
+      pageSlot.innerHTML = loadingHTML("Cargando proyectos…");
+      try {
+        [PROYECTOS, AVANCE, TAREAS] = await Promise.all([
+          api.proyectos.getAll(), api.proyectos.getAvance(), api.tareas.getAll(),
+        ]);
+        pageSlot.innerHTML = projectsPageHTML(PROYECTOS, AVANCE, TAREAS);
+      } catch (err) {
+        pageSlot.innerHTML = errorHTML(err);
+      }
+    }
+
+    async function openNewProjectForm() {
+      const slot = document.getElementById("new-project-slot");
+      slot.innerHTML = loadingHTML("Preparando formulario…");
+      try {
+        if (!ESTADOS.length) ESTADOS = await api.estados.getAll();
+        if (!USUARIOS.length) USUARIOS = await api.usuarios.getAll();
+        slot.innerHTML = newProjectFormHTML(ESTADOS, USUARIOS);
+      } catch (err) {
+        slot.innerHTML = errorHTML(err);
+      }
+    }
+    function closeNewProjectForm() {
+      document.getElementById("new-project-slot").innerHTML = "";
+    }
+    async function submitNewProject(e) {
+      e.preventDefault();
+      const form = e.target;
+      const errorEl = document.getElementById("new-project-error");
+      errorEl.textContent = "";
+      try {
+        await api.proyectos.create({
+          nombre: form.nombre.value.trim(),
+          descripcion: form.descripcion.value.trim() || null,
+          fecha_inicio: form.fecha_inicio.value,
+          fecha_fin: form.fecha_fin.value || null,
+          id_estado: Number(form.id_estado.value),
+          id_responsable: Number(form.id_responsable.value),
+        });
+        closeNewProjectForm();
+        await loadProjects();
+      } catch (err) {
+        errorEl.textContent = err.message;
+      }
+    }
+
+    if (user) {
+      initShell("projects", "Proyectos", "Todos los proyectos de tu equipo");
+      refreshSidebarBadge("projects");
+      loadProjects();
+    }
+  </script>
+</body>
+</html>

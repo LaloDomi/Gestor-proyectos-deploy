@@ -1,0 +1,266 @@
+{
+  "info": {
+    "name": "GestorProyectos API",
+    "_postman_id": "b1e2c3d4-5678-4abc-9def-1234567890ab",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000/api" }
+  ],
+  "item": [
+    {
+      "name": "Roles",
+      "item": [
+        { "name": "Listar roles", "request": { "method": "GET", "url": "{{base_url}}/roles" } },
+        { "name": "Obtener rol por id", "request": { "method": "GET", "url": "{{base_url}}/roles/1" } },
+        {
+          "name": "Crear rol",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre_rol\": \"Invitado\"\n}" },
+            "url": "{{base_url}}/roles"
+          }
+        },
+        {
+          "name": "Actualizar rol",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre_rol\": \"Invitado Editado\"\n}" },
+            "url": "{{base_url}}/roles/1"
+          }
+        },
+        { "name": "Eliminar rol", "request": { "method": "DELETE", "url": "{{base_url}}/roles/1" } }
+      ]
+    },
+    {
+      "name": "Estados",
+      "item": [
+        { "name": "Listar estados", "request": { "method": "GET", "url": "{{base_url}}/estados" } },
+        { "name": "Obtener estado por id", "request": { "method": "GET", "url": "{{base_url}}/estados/1" } },
+        {
+          "name": "Crear estado",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre_estado\": \"En revision\"\n}" },
+            "url": "{{base_url}}/estados"
+          }
+        },
+        {
+          "name": "Actualizar estado",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre_estado\": \"En revision final\"\n}" },
+            "url": "{{base_url}}/estados/1"
+          }
+        },
+        { "name": "Eliminar estado", "request": { "method": "DELETE", "url": "{{base_url}}/estados/1" } }
+      ]
+    },
+    {
+      "name": "Prioridades",
+      "item": [
+        { "name": "Listar prioridades", "request": { "method": "GET", "url": "{{base_url}}/prioridades" } },
+        { "name": "Obtener prioridad por id", "request": { "method": "GET", "url": "{{base_url}}/prioridades/1" } },
+        {
+          "name": "Crear prioridad",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre_prioridad\": \"Critica\"\n}" },
+            "url": "{{base_url}}/prioridades"
+          }
+        },
+        {
+          "name": "Actualizar prioridad",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"nombre_prioridad\": \"Critica alta\"\n}" },
+            "url": "{{base_url}}/prioridades/1"
+          }
+        },
+        { "name": "Eliminar prioridad", "request": { "method": "DELETE", "url": "{{base_url}}/prioridades/1" } }
+      ]
+    },
+    {
+      "name": "Usuarios",
+      "item": [
+        { "name": "Listar usuarios", "request": { "method": "GET", "url": "{{base_url}}/usuarios" } },
+        { "name": "Obtener usuario por id", "request": { "method": "GET", "url": "{{base_url}}/usuarios/1" } },
+        {
+          "name": "Crear usuario",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Nuevo Usuario\",\n  \"correo\": \"nuevo@gmail.com\",\n  \"contrasena\": \"1234\",\n  \"id_rol\": 3\n}"
+            },
+            "url": "{{base_url}}/usuarios"
+          }
+        },
+        {
+          "name": "Actualizar usuario",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Usuario Editado\",\n  \"correo\": \"nuevo@gmail.com\",\n  \"contrasena\": \"1234\",\n  \"id_rol\": 3\n}"
+            },
+            "url": "{{base_url}}/usuarios/1"
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"aldo@gmail.com\",\n  \"contrasena\": \"1234\"\n}"
+            },
+            "url": "{{base_url}}/usuarios/login"
+          }
+        },
+        { "name": "Eliminar usuario", "request": { "method": "DELETE", "url": "{{base_url}}/usuarios/1" } }
+      ]
+    },
+    {
+      "name": "Proyectos",
+      "item": [
+        { "name": "Listar proyectos", "request": { "method": "GET", "url": "{{base_url}}/proyectos" } },
+        { "name": "Obtener proyecto por id", "request": { "method": "GET", "url": "{{base_url}}/proyectos/1" } },
+        { "name": "Avance por proyecto", "request": { "method": "GET", "url": "{{base_url}}/proyectos/avance" } },
+        {
+          "name": "Crear proyecto",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Nuevo Proyecto\",\n  \"descripcion\": \"Descripcion de prueba\",\n  \"fecha_inicio\": \"2026-07-01\",\n  \"fecha_fin\": \"2026-08-01\",\n  \"id_estado\": 1,\n  \"id_responsable\": 2\n}"
+            },
+            "url": "{{base_url}}/proyectos"
+          }
+        },
+        {
+          "name": "Actualizar proyecto",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Proyecto Editado\",\n  \"descripcion\": \"Descripcion editada\",\n  \"fecha_inicio\": \"2026-07-01\",\n  \"fecha_fin\": \"2026-08-15\",\n  \"id_estado\": 2,\n  \"id_responsable\": 2\n}"
+            },
+            "url": "{{base_url}}/proyectos/1"
+          }
+        },
+        { "name": "Eliminar proyecto", "request": { "method": "DELETE", "url": "{{base_url}}/proyectos/1" } }
+      ]
+    },
+    {
+      "name": "Tareas",
+      "item": [
+        { "name": "Listar tareas", "request": { "method": "GET", "url": "{{base_url}}/tareas" } },
+        { "name": "Obtener tarea por id", "request": { "method": "GET", "url": "{{base_url}}/tareas/1" } },
+        { "name": "Tareas por proyecto", "request": { "method": "GET", "url": "{{base_url}}/tareas/proyecto/1" } },
+        { "name": "Contar tareas por estado", "request": { "method": "GET", "url": "{{base_url}}/tareas/stats/estado" } },
+        { "name": "Contar tareas por prioridad", "request": { "method": "GET", "url": "{{base_url}}/tareas/stats/prioridad" } },
+        {
+          "name": "Crear tarea",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Nueva tarea\",\n  \"descripcion\": \"Descripcion de la tarea\",\n  \"fecha_inicio\": \"2026-07-01\",\n  \"fecha_limite\": \"2026-07-10\",\n  \"id_prioridad\": 2,\n  \"id_estado\": 1,\n  \"id_proyecto\": 1,\n  \"id_responsable\": 3\n}"
+            },
+            "url": "{{base_url}}/tareas"
+          }
+        },
+        {
+          "name": "Actualizar tarea",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Tarea editada\",\n  \"descripcion\": \"Descripcion editada\",\n  \"fecha_inicio\": \"2026-07-01\",\n  \"fecha_limite\": \"2026-07-15\",\n  \"id_prioridad\": 3,\n  \"id_estado\": 2,\n  \"id_proyecto\": 1,\n  \"id_responsable\": 3\n}"
+            },
+            "url": "{{base_url}}/tareas/1"
+          }
+        },
+        { "name": "Eliminar tarea", "request": { "method": "DELETE", "url": "{{base_url}}/tareas/1" } }
+      ]
+    },
+    {
+      "name": "Calendario",
+      "item": [
+        { "name": "Listar eventos", "request": { "method": "GET", "url": "{{base_url}}/calendario" } },
+        { "name": "Obtener evento por id", "request": { "method": "GET", "url": "{{base_url}}/calendario/1" } },
+        {
+          "name": "Crear evento",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Nueva reunion\",\n  \"descripcion\": \"Revision de avance\",\n  \"fecha\": \"2026-07-10\",\n  \"hora\": \"10:00\",\n  \"id_proyecto\": 1,\n  \"id_tarea\": 1\n}"
+            },
+            "url": "{{base_url}}/calendario"
+          }
+        },
+        {
+          "name": "Actualizar evento",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Reunion editada\",\n  \"descripcion\": \"Revision de avance final\",\n  \"fecha\": \"2026-07-11\",\n  \"hora\": \"11:00\",\n  \"id_proyecto\": 1,\n  \"id_tarea\": 1\n}"
+            },
+            "url": "{{base_url}}/calendario/1"
+          }
+        },
+        { "name": "Eliminar evento", "request": { "method": "DELETE", "url": "{{base_url}}/calendario/1" } }
+      ]
+    },
+    {
+      "name": "Reportes",
+      "item": [
+        { "name": "Listar reportes", "request": { "method": "GET", "url": "{{base_url}}/reportes" } },
+        { "name": "Obtener reporte por id", "request": { "method": "GET", "url": "{{base_url}}/reportes/1" } },
+        {
+          "name": "Crear reporte",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Nuevo reporte\",\n  \"descripcion\": \"Descripcion del reporte\",\n  \"id_proyecto\": 1,\n  \"id_usuario\": 1\n}"
+            },
+            "url": "{{base_url}}/reportes"
+          }
+        },
+        {
+          "name": "Actualizar reporte",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Reporte editado\",\n  \"descripcion\": \"Descripcion editada\",\n  \"id_proyecto\": 1,\n  \"id_usuario\": 1\n}"
+            },
+            "url": "{{base_url}}/reportes/1"
+          }
+        },
+        { "name": "Eliminar reporte", "request": { "method": "DELETE", "url": "{{base_url}}/reportes/1" } }
+      ]
+    }
+  ]
+}

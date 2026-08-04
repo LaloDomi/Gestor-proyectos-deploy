@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Proyecto — ProjectFlow</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar-slot"></aside>
+    <div class="main">
+      <header class="topbar" id="topbar-slot"></header>
+      <div class="page" id="page-slot"></div>
+    </div>
+  </div>
+  <div id="modal-slot"></div>
+  <script src="api.js"></script>
+  <script src="auth.js"></script>
+  <script src="common.js"></script>
+  <script>
+    const user = requireAuth();
+    const PROJECT_ID = parseInt(new URLSearchParams(window.location.search).get("id"));
+    let OPEN_TASK_ID = null;
+    let PROYECTO = null, TAREAS = [], ESTADOS = [], PRIORIDADES = [], USUARIOS = [];
+
+    async function loadProjectData() {
+      const pageSlot = document.getElementById("page-slot");
+      pageSlot.innerHTML = loadingHTML("Cargando proyecto…");
+      try {
+        const [proyecto, tareas, estados] = await Promise.all([
+          api.proyectos.getById(PROJECT_ID),
+          api.tareas.getByProyecto(PROJECT_ID),
+          api.estados.getAll(),
+        ]);
+        PROYECTO = proyecto; TAREAS = tareas; ESTADOS = estados;
+        initShell("projects", proyecto ? proyecto.nombre : "Proyecto", "Tablero de tareas");
+        renderProjectPage();
+      } catch (err) {
+        pageSlot.innerHTML = errorHTML(err);
+      }
+    }
+
+    function renderProjectPage() {
+      document.getElementById("page-slot").innerHTML = projectDetailInnerHTML(PROYECTO, TAREAS, ESTADOS);
+      const t = TAREAS.find((x) => x.id_tarea === OPEN_TASK_ID);
+      document.getElementById("modal-slot").innerHTML = t ? taskModalHTML(t, ESTADOS) : "";
+    }
+
+    function openTask(id) { OPEN_TASK_ID = id; renderProjectPage(); }
+    function closeTask() { OPEN_TASK_ID = null; renderProjectPage(); }
+
+    async function setTaskStatus(id, id_estado) {
+      const t = TAREAS.find((x) => x.id_tarea === id);
+      if (!t) return;
+      try {
+        await api.tareas.update(id, {
+          titulo: t.titulo, descripcion: t.descripcion, fecha_inicio: t.fecha_inicio,
+          fecha_limite: t.fecha_limite, id_prioridad: t.id_prioridad, id_estado,
+          id_proyecto: t.id_proyecto, id_responsable: t.id_responsable,
+        });
+        TAREAS = await api.tareas.getByProyecto(PROJECT_ID);
+        renderProjectPage();
+      } catch (err) {
+        alert("No se pudo actualizar el estado: " + err.message);
+      }
+    }
+
+    async function deleteTask(id) {
+      if (!confirm("¿Eliminar esta tarea? Esta acción no se puede deshacer.")) return;
+      try {
+        await api.tareas.remove(id);
+        OPEN_TASK_ID = null;
+        TAREAS = await api.tareas.getByProyecto(PROJECT_ID);
+        renderProjectPage();
+      } catch (err) {
+        alert("No se pudo eliminar la tarea: " + err.message);
+      }
+    }
+
+    async function openNewTaskForm(defaultEstado) {
+      const slot = document.getElementById("new-task-slot");
+      slot.innerHTML = loadingHTML("Preparando formulario…");
+      try {
+        if (!PRIORIDADES.length) PRIORIDADES = await api.prioridades.getAll();
+        if (!USUARIOS.length) USUARIOS = await api.usuarios.getAll();
+        slot.innerHTML = newTaskFormHTML(PROJECT_ID, ESTADOS, PRIORIDADES, USUARIOS, defaultEstado);
+        slot.scrollIntoView({ behavior: "smooth", block: "center" });
+      } catch (err) {
+        slot.innerHTML = errorHTML(err);
+      }
+    }
+    function closeNewTaskForm() {
+      const slot = document.getElementById("new-task-slot");
+      if (slot) slot.innerHTML = "";
+    }
+    async function submitNewTask(e, idProyecto) {
+      e.preventDefault();
+      const form = e.target;
+      const errorEl = document.getElementById("new-task-error");
+      errorEl.textContent = "";
+      try {
+        await api.tareas.create({
+          titulo: form.titulo.value.trim(),
+          descripcion: form.descripcion.value.trim() || null,
+          fecha_inicio: form.fecha_inicio.value,
+          fecha_limite: form.fecha_limite.value,
+          id_prioridad: Number(form.id_prioridad.value),
+          id_estado: Number(form.id_estado.value),
+          id_proyecto: idProyecto,
+          id_responsable: Number(form.id_responsable.value),
+        });
+        TAREAS = await api.tareas.getByProyecto(PROJECT_ID);
+        renderProjectPage();
+      } catch (err) {
+        errorEl.textContent = err.message;
+      }
+    }
+
+    if (user) {
+      if (!PROJECT_ID) {
+        document.getElementById("page-slot").innerHTML = errorHTML(new Error("Falta el parámetro ?id= en la URL."));
+      } else {
+        refreshSidebarBadge("projects");
+        loadProjectData();
+      }
+    }
+  </script>
+</body>
+</html>

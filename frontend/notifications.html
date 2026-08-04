@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Notificaciones — ProjectFlow</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar-slot"></aside>
+    <div class="main">
+      <header class="topbar" id="topbar-slot"></header>
+      <div class="page" id="page-slot"></div>
+    </div>
+  </div>
+  <script src="api.js"></script>
+  <script src="auth.js"></script>
+  <script src="common.js"></script>
+  <script>
+    const user = requireAuth();
+    let NOTIFS = [];
+
+    async function renderNotificationsPage() {
+      const pageSlot = document.getElementById("page-slot");
+      pageSlot.innerHTML = loadingHTML("Calculando notificaciones…");
+      try {
+        NOTIFS = await getDerivedNotifications();
+        pageSlot.innerHTML = notificationsInnerHTML(NOTIFS);
+        refreshSidebarBadge("notifications");
+      } catch (err) {
+        pageSlot.innerHTML = errorHTML(err);
+      }
+    }
+    function markRead(id) {
+      markNotifRead(id);
+      renderNotificationsPage();
+    }
+    function markAllRead() {
+      markAllNotifRead(NOTIFS.map((n) => n.id));
+      renderNotificationsPage();
+    }
+
+    if (user) {
+      initShell("notifications", "Notificaciones", "Actividad reciente de tu equipo");
+      renderNotificationsPage();
+    }
+  </script>
+</body>
+</html>
