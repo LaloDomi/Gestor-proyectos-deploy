@@ -7,7 +7,9 @@
    Por defecto el backend usa: http://localhost:3000
    ========================================================= */
 
-const API_BASE_URL = window.API_BASE_URL || "http://localhost:3000/api";
+const API_BASE_URL =
+  window.API_BASE_URL ||
+  "https://gestor-proyectos-deploy.onrender.com/api";
 
 /**
  * Wrapper genérico sobre fetch().
