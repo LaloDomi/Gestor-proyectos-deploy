@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Chat — ProjectFlow</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  .chat-layout{display:grid;grid-template-columns:280px 1fr;gap:16px;height:calc(100vh - 160px)}
+  .chat-canales{overflow-y:auto}
+  .chat-canal-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:14px}
+  .chat-canal-item:hover{background:var(--surface2)}
+  .chat-canal-item.active{background:var(--surface2);font-weight:600}
+  .chat-canal-label{font-size:11px;text-transform:uppercase;color:var(--sub);margin:16px 0 6px;letter-spacing:.04em}
+  .chat-canal-label:first-child{margin-top:0}
+  .chat-thread{display:flex;flex-direction:column;height:100%}
+  .chat-mensajes{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:4px}
+  .chat-msg{max-width:70%;padding:8px 12px;border-radius:12px;background:var(--surface2);font-size:14px}
+  .chat-msg.propio{align-self:flex-end;background:var(--accent);color:#12141B}
+  .chat-msg-meta{font-size:11px;color:var(--sub);margin-bottom:2px}
+  .chat-msg.propio .chat-msg-meta{color:#12141B99}
+  .chat-composer{display:flex;gap:8px;margin-top:12px}
+  .chat-composer input{flex:1}
+</style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar-slot"></aside>
+    <div class="main">
+      <header class="topbar" id="topbar-slot"></header>
+      <div class="page" id="page-slot"></div>
+    </div>
+  </div>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="api.js"></script>
+  <script src="auth.js"></script>
+  <script src="common.js"></script>
+  <script>
+    const user = requireAuth();
+    let CANALES = { proyectos: [], directos: [] };
+    let COMPANEROS = [];
+    let CANAL_ACTUAL = null;
+    let socket = null;
+
+    function chatPageHTML() {
+      const itemsProyecto = CANALES.proyectos.map((c) => `
+        <div class="chat-canal-item ${CANAL_ACTUAL === c.id_canal ? "active" : ""}" onclick="seleccionarCanal(${c.id_canal})">
+          ${icon("folder", { size: 14, color: C.sub })}<span>${c.nombre}</span>
+        </div>`).join("") || `<p style="font-size:13px;color:${C.sub}">Sin proyectos todavía.</p>`;
+
+      const itemsDirectos = CANALES.directos.map((c) => `
+        <div class="chat-canal-item ${CANAL_ACTUAL === c.id_canal ? "active" : ""}" onclick="seleccionarCanal(${c.id_canal})">
+          ${avatar(c.nombre, 20)}<span>${c.nombre}</span>
+        </div>`).join("");
+
+      const opcionesCompaneros = COMPANEROS
+        .filter((p) => !CANALES.directos.some((d) => d.nombre === p.nombre) || true)
+        .map((p) => `<option value="${p.id_usuario}">${p.nombre}</option>`).join("");
+
+      return `
+        <div class="chat-layout">
+          <div class="panel chat-canales">
+            <p class="chat-canal-label">Proyectos</p>
+            ${itemsProyecto}
+            <p class="chat-canal-label">Directos</p>
+            ${itemsDirectos}
+            ${COMPANEROS.length ? `
+            <p class="chat-canal-label">Nuevo mensaje directo</p>
+            <select id="nuevo-directo" onchange="if(this.value) iniciarDirecto(this.value)">
+              <option value="">Elegir compañero…</option>
+              ${opcionesCompaneros}
+            </select>` : ""}
+          </div>
+          <div class="panel chat-thread">
+            <div id="chat-estado" style="font-size:12px;color:${C.sub};margin-bottom:8px"></div>
+            <div class="chat-mensajes" id="chat-mensajes">
+              ${CANAL_ACTUAL ? "" : `<p style="color:${C.sub}">Elige un canal a la izquierda para empezar a chatear.</p>`}
+            </div>
+            ${CANAL_ACTUAL ? `
+            <form class="chat-composer" onsubmit="enviarMensaje(event)">
+              <input type="text" id="chat-input" placeholder="Escribe un mensaje…" autocomplete="off" required maxlength="2000" />
+              <button type="submit" class="btn-accent">Enviar</button>
+            </form>` : ""}
+          </div>
+        </div>`;
+    }
+
+    function mensajeHTML(m) {
+      const propio = m.id_usuario === user.id_usuario;
+      const hora = new Date(m.creado_en).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      return `
+        <div class="chat-msg ${propio ? "propio" : ""}">
+          ${propio ? "" : `<div class="chat-msg-meta">${m.usuario_nombre}</div>`}
+          <div>${m.contenido}</div>
+          <div class="chat-msg-meta" style="margin-top:2px;margin-bottom:0">${hora}</div>
+        </div>`;
+    }
+
+    function scrollAbajo() {
+      const el = document.getElementById("chat-mensajes");
+      if (el) el.scrollTop = el.scrollHeight;
+    }
+
+    async function seleccionarCanal(idCanal) {
+      CANAL_ACTUAL = idCanal;
+      document.getElementById("page-slot").innerHTML = chatPageHTML();
+      document.getElementById("chat-mensajes").innerHTML = loadingHTML("Cargando mensajes…");
+      try {
+        socket.emit("canal:unirse", { id_canal: idCanal }, (r) => {
+          if (r && r.error) document.getElementById("chat-estado").textContent = r.error;
+        });
+        const mensajes = await api.chat.getMensajes(idCanal);
+        document.getElementById("chat-mensajes").innerHTML = mensajes.map(mensajeHTML).join("") || `<p style="color:${C.sub}">Todavía no hay mensajes. ¡Escribe el primero!</p>`;
+        scrollAbajo();
+        document.getElementById("chat-input").focus();
+      } catch (err) {
+        document.getElementById("chat-mensajes").innerHTML = errorHTML(err);
+      }
+    }
+
+    async function iniciarDirecto(idUsuario) {
+      const canal = await api.chat.getCanalDirecto(idUsuario);
+      if (!CANALES.directos.some((c) => c.id_canal === canal.id_canal)) {
+        await cargarCanales();
+      }
+      seleccionarCanal(canal.id_canal);
+    }
+
+    function enviarMensaje(e) {
+      e.preventDefault();
+      const input = document.getElementById("chat-input");
+      const contenido = input.value.trim();
+      if (!contenido) return;
+      socket.emit("mensaje:enviar", { id_canal: CANAL_ACTUAL, contenido }, (r) => {
+        if (r && r.error) alert(r.error);
+      });
+      input.value = "";
+    }
+
+    async function cargarCompaneros() {
+      const idsVistos = new Set([user.id_usuario]);
+      const lista = [];
+      for (const p of CANALES.proyectos) {
+        try {
+          const miembros = await api.miembros.getAll(p.id_proyecto);
+          for (const m of miembros) {
+            if (!idsVistos.has(m.id_usuario)) {
+              idsVistos.add(m.id_usuario);
+              lista.push(m);
+            }
+          }
+        } catch { /* ignorar */ }
+      }
+      COMPANEROS = lista;
+    }
+
+    async function cargarCanales() {
+      CANALES = await api.chat.getCanales();
+      await cargarCompaneros();
+    }
+
+    function conectarSocket() {
+      socket = io(SOCKET_URL, { auth: { token: getToken() } });
+      const estadoEl = () => document.getElementById("chat-estado");
+
+      socket.on("connect", () => { if (estadoEl()) estadoEl().textContent = ""; });
+      socket.on("disconnect", () => { if (estadoEl()) estadoEl().textContent = "Reconectando…"; });
+
+      socket.on("mensaje:nuevo", (m) => {
+        if (m.id_canal !== CANAL_ACTUAL) return;
+        const cont = document.getElementById("chat-mensajes");
+        if (!cont) return;
+        cont.insertAdjacentHTML("beforeend", mensajeHTML(m));
+        scrollAbajo();
+      });
+    }
+
+    (async () => {
+      if (!user) return;
+      initShell("chat", "Chat", "Habla con tu equipo en tiempo real");
+      refreshSidebarBadge("chat");
+      document.getElementById("page-slot").innerHTML = loadingHTML("Cargando tus canales…");
+      try {
+        await cargarCanales();
+        conectarSocket();
+        document.getElementById("page-slot").innerHTML = chatPageHTML();
+
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("proyecto")) {
+          const canal = await api.chat.getCanalProyecto(params.get("proyecto"));
+          await cargarCanales();
+          seleccionarCanal(canal.id_canal);
+        } else if (params.get("usuario")) {
+          iniciarDirecto(params.get("usuario"));
+        }
+      } catch (err) {
+        document.getElementById("page-slot").innerHTML = errorHTML(err);
+      }
+    })();
+  </script>
+</body>
+</html>

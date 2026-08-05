@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Verificar correo — ProjectFlow</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="auth-shell">
+    <div class="auth-glow-a"></div><div class="auth-glow-b"></div>
+    <div class="auth-box">
+      <div class="auth-logo">
+        <div class="auth-logo-icon" id="logo-icon"></div>
+        <span>ProjectFlow</span>
+      </div>
+      <div class="auth-card">
+        <h1>Verificación de correo</h1>
+        <p class="sub" id="verify-sub">Verificando…</p>
+        <a class="btn-primary" style="display:inline-flex;margin-top:8px" href="dashboard.html">Ir a mi panel</a>
+      </div>
+    </div>
+  </div>
+  <script src="api.js"></script>
+  <script src="auth.js"></script>
+  <script src="common.js"></script>
+  <script>
+    document.getElementById("logo-icon").innerHTML = icon("folder", { size: 18, color: C.bg });
+    const TOKEN = new URLSearchParams(window.location.search).get("token");
+    const subEl = document.getElementById("verify-sub");
+
+    (async () => {
+      if (!TOKEN) {
+        subEl.textContent = "Falta el token de verificación en el enlace.";
+        return;
+      }
+      try {
+        const data = await api.auth.verifyEmail(TOKEN);
+        subEl.textContent = `¡Listo! ${data.correo} quedó verificado.`;
+
+        // Si ya hay una sesión activa con ese mismo correo en este navegador,
+        // actualizamos el estado local para que el banner desaparezca ya
+        // mismo, sin esperar a que vuelva a iniciar sesión.
+        const session = getSession();
+        if (session && session.usuario.correo === data.correo) {
+          session.usuario.correo_verificado = true;
+          saveSession(session.token, session.usuario);
+        }
+      } catch (err) {
+        subEl.textContent = err.message;
+      }
+    })();
+  </script>
+</body>
+</html>

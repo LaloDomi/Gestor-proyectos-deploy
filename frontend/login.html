@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Iniciar sesión — ProjectFlow</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="auth-shell">
+    <div class="auth-glow-a"></div><div class="auth-glow-b"></div>
+    <div class="auth-box">
+      <div class="auth-logo">
+        <div class="auth-logo-icon" id="logo-icon"></div>
+        <span>ProjectFlow</span>
+      </div>
+      <div class="auth-card">
+        <h1>Inicia sesión</h1>
+        <p class="sub">Organiza tus proyectos en un solo lugar.</p>
+        <form id="login-form">
+          <div class="field" id="field-email"></div>
+          <div class="field" id="field-pass"></div>
+          <p class="auth-error" id="login-error"></p>
+          <button type="submit" class="btn-primary" id="login-submit">Entrar <span id="arrow-icon"></span></button>
+        </form>
+      </div>
+      <p class="auth-footer">¿No tienes cuenta? <a href="register.html">Regístrate</a></p>
+    </div>
+  </div>
+  <script src="api.js"></script>
+  <script src="auth.js"></script>
+  <script src="common.js"></script>
+  <script>
+    document.getElementById("logo-icon").innerHTML = icon("folder", { size: 18, color: C.bg });
+    document.getElementById("field-email").innerHTML = icon("mail", { size: 16, color: C.sub }) + '<input type="email" name="correo" placeholder="Correo electrónico" required />';
+    document.getElementById("field-pass").innerHTML = icon("lock", { size: 16, color: C.sub }) + '<input type="password" name="contrasena" placeholder="Contraseña" required />';
+    document.getElementById("arrow-icon").innerHTML = icon("arrowRight", { size: 16 });
+
+    // Si ya hay sesión activa, saltar directo al panel (o al redirect pedido)
+    {
+      const session = getSession();
+      if (session && !tokenExpirado(session.token)) {
+        const redirect = new URLSearchParams(window.location.search).get("redirect");
+        window.location.href = redirect || "dashboard.html";
+      }
+    }
+
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const correo = form.correo.value.trim();
+      const contrasena = form.contrasena.value;
+      const errorEl = document.getElementById("login-error");
+      const btn = document.getElementById("login-submit");
+      errorEl.textContent = "";
+      btn.disabled = true;
+      btn.style.opacity = 0.6;
+      try {
+        const data = await api.auth.login(correo, contrasena);
+        saveSession(data.token, data.usuario);
+        const redirect = new URLSearchParams(window.location.search).get("redirect");
+        window.location.href = redirect || "dashboard.html";
+      } catch (err) {
+        errorEl.textContent = err.message;
+        btn.disabled = false;
+        btn.style.opacity = 1;
+      }
+    });
+  </script>
+</body>
+</html>

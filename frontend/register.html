@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Crear cuenta — ProjectFlow</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="auth-shell">
+    <div class="auth-glow-a"></div><div class="auth-glow-b"></div>
+    <div class="auth-box">
+      <div class="auth-logo">
+        <div class="auth-logo-icon" id="logo-icon"></div>
+        <span>ProjectFlow</span>
+      </div>
+      <div class="auth-card">
+        <h1>Crea tu cuenta</h1>
+        <p class="sub">Empieza a coordinar a tu equipo hoy.</p>
+        <form id="register-form">
+          <div class="field" id="field-name"></div>
+          <div class="field" id="field-email"></div>
+          <div class="field" id="field-pass"></div>
+          <p class="auth-error" id="register-error"></p>
+          <button type="submit" class="btn-primary" id="register-submit">Crear cuenta <span id="arrow-icon"></span></button>
+        </form>
+      </div>
+      <p class="auth-footer">¿Ya tienes cuenta? <a href="login.html">Inicia sesión</a></p>
+    </div>
+  </div>
+  <script src="api.js"></script>
+  <script src="auth.js"></script>
+  <script src="common.js"></script>
+  <script>
+    document.getElementById("logo-icon").innerHTML = icon("folder", { size: 18, color: C.bg });
+    document.getElementById("field-name").innerHTML = icon("user", { size: 16, color: C.sub }) + '<input type="text" name="nombre" placeholder="Nombre completo" required />';
+    document.getElementById("field-email").innerHTML = icon("mail", { size: 16, color: C.sub }) + '<input type="email" name="correo" placeholder="Correo electrónico" required />';
+    document.getElementById("field-pass").innerHTML = icon("lock", { size: 16, color: C.sub }) + '<input type="password" name="contrasena" placeholder="Contraseña" required minlength="4" />';
+    document.getElementById("arrow-icon").innerHTML = icon("arrowRight", { size: 16 });
+
+    document.getElementById("register-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const errorEl = document.getElementById("register-error");
+      const btn = document.getElementById("register-submit");
+      errorEl.textContent = "";
+      btn.disabled = true;
+      btn.style.opacity = 0.6;
+      try {
+        // Nadie elige su rol al registrarse: todo usuario nuevo entra como
+        // Colaborador sin proyecto asignado; un admin o líder lo asigna después.
+        const data = await api.auth.register({
+          nombre: form.nombre.value.trim(),
+          correo: form.correo.value.trim(),
+          contrasena: form.contrasena.value,
+        });
+        saveSession(data.token, data.usuario);
+        window.location.href = "dashboard.html";
+      } catch (err) {
+        errorEl.textContent = err.message;
+        btn.disabled = false;
+        btn.style.opacity = 1;
+      }
+    });
+  </script>
+</body>
+</html>

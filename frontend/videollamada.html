@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Videollamada — ProjectFlow</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  .videollamada-shell{height:calc(100vh - 96px);display:flex;flex-direction:column}
+  #jitsi-container{flex:1;border-radius:12px;overflow:hidden;background:#000}
+</style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar-slot"></aside>
+    <div class="main">
+      <header class="topbar" id="topbar-slot"></header>
+      <div class="page" id="page-slot"></div>
+    </div>
+  </div>
+  <script src="https://meet.jit.si/external_api.js"></script>
+  <script src="api.js"></script>
+  <script src="auth.js"></script>
+  <script src="common.js"></script>
+  <script>
+    const user = requireAuth();
+    const PROJECT_ID = new URLSearchParams(window.location.search).get("proyecto");
+
+    async function iniciar() {
+      const pageSlot = document.getElementById("page-slot");
+      if (!PROJECT_ID) {
+        pageSlot.innerHTML = errorHTML(new Error("Falta el parámetro ?proyecto= en la URL."));
+        return;
+      }
+      pageSlot.innerHTML = loadingHTML("Conectando a la videollamada…");
+      try {
+        const [proyecto, llamada] = await Promise.all([
+          api.proyectos.getById(PROJECT_ID),
+          api.videollamadas.iniciarOUnirse(PROJECT_ID),
+        ]);
+        initShell("projects", `Videollamada · ${proyecto.nombre}`, llamada.nueva ? "Sala nueva creada para tu equipo" : "Uniéndote a la sala activa");
+
+        pageSlot.innerHTML = `
+          <a class="back-link" href="project.html?id=${PROJECT_ID}">${icon("chevronLeft", { size: 16 })}Volver al proyecto</a>
+          <div class="videollamada-shell"><div id="jitsi-container"></div></div>`;
+
+        new JitsiMeetExternalAPI("meet.jit.si", {
+          roomName: llamada.sala,
+          parentNode: document.getElementById("jitsi-container"),
+          width: "100%",
+          height: "100%",
+          userInfo: { displayName: user.nombre },
+        });
+      } catch (err) {
+        pageSlot.innerHTML = errorHTML(err);
+      }
+    }
+
+    if (user) iniciar();
+  </script>
+</body>
+</html>
