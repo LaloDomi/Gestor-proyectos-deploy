@@ -15,6 +15,10 @@ const transporter =
     ? nodemailer.createTransport({
         service: "gmail",
         auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
+        // Algunos hosts (Render incluido) anuncian IPv6 pero no tienen salida
+        // IPv6 real, y la conexión a Gmail falla con ENETUNREACH. Forzar IPv4
+        // evita ese problema.
+        family: 4,
       })
     : null;
 
