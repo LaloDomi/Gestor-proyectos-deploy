@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Equipo — ProjectFlow</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar-slot"></aside>
+    <div class="main">
+      <header class="topbar" id="topbar-slot"></header>
+      <div class="page" id="page-slot"></div>
+    </div>
+  </div>
+  <script src="api.js"></script>
+  <script src="auth.js"></script>
+  <script src="common.js"></script>
+  <script>
+    const user = requireAuth();
+    const pageSlot = () => document.getElementById("page-slot");
+
+    async function cambiarRolUsuario(idUsuario, idRol) {
+      try {
+        await api.usuarios.actualizarRol(idUsuario, Number(idRol));
+      } catch (err) {
+        alert("No se pudo cambiar el rol: " + err.message);
+        cargarEquipo();
+      }
+    }
+
+    async function cambiarRolMiembro(idProyecto, idUsuario, rolProyecto) {
+      try {
+        await api.miembros.actualizarRol(idProyecto, idUsuario, rolProyecto);
+      } catch (err) {
+        alert("No se pudo cambiar el rol en el proyecto: " + err.message);
+        cargarEquipo();
+      }
+    }
+
+    async function quitarMiembro(idProyecto, idUsuario) {
+      if (!confirm("¿Quitar a esta persona del proyecto?")) return;
+      try {
+        await api.miembros.remove(idProyecto, idUsuario);
+        cargarEquipo();
+      } catch (err) {
+        alert("No se pudo quitar al miembro: " + err.message);
+      }
+    }
+
+    function abrirInvitar(idProyecto) {
+      document.getElementById(`invite-slot-${idProyecto}`).innerHTML = invitarFormularioHTML(idProyecto);
+    }
+    function cerrarInvitar(idProyecto) {
+      document.getElementById(`invite-slot-${idProyecto}`).innerHTML = "";
+    }
+    async function enviarInvitacion(e, idProyecto) {
+      e.preventDefault();
+      const form = e.target;
+      const errorEl = document.getElementById(`invite-error-${idProyecto}`);
+      errorEl.textContent = "";
+      try {
+        const invitacion = await api.invitaciones.crear(idProyecto, form.correo.value.trim(), form.rol_proyecto.value);
+        const enlace = `${location.origin}${location.pathname.replace("team.html", "invite-accept.html")}?token=${invitacion.token}`;
+        document.getElementById(`invite-result-${idProyecto}`).innerHTML = inviteResultHTML(enlace);
+        form.querySelector("button[type=submit]").disabled = true;
+      } catch (err) {
+        errorEl.textContent = err.message;
+      }
+    }
+
+    async function cargarEquipo() {
+      pageSlot().innerHTML = loadingHTML("Cargando equipo…");
+      try {
+        if (user.rol_codigo === "ADMIN") {
+          const [usuarios, roles] = await Promise.all([api.usuarios.getAll(), api.roles.getAll()]);
+          pageSlot().innerHTML = adminTeamPageHTML(usuarios, roles);
+        } else if (user.rol_codigo === "LIDER") {
+          const proyectos = (await api.proyectos.getAll()).filter((p) => p.mi_rol_proyecto === "lider");
+          if (!proyectos.length) {
+            pageSlot().innerHTML = `<p style="color:${C.sub}">Todavía no lideras ningún proyecto. Crea uno desde "Proyectos" para empezar a invitar gente.</p>`;
+            return;
+          }
+          const miembrosPorProyecto = await Promise.all(proyectos.map((p) => api.miembros.getAll(p.id_proyecto)));
+          pageSlot().innerHTML = proyectos.map((p, i) => liderTeamProjectCardHTML(p, miembrosPorProyecto[i])).join("");
+        } else {
+          pageSlot().innerHTML = `<p style="color:${C.sub}">Esta sección es solo para administradores y líderes de proyecto.</p>`;
+        }
+      } catch (err) {
+        pageSlot().innerHTML = errorHTML(err);
+      }
+    }
+
+    if (user) {
+      initShell("team", "Equipo", user.rol_codigo === "ADMIN" ? "Gestiona usuarios y roles" : "Gestiona a los miembros de tus proyectos");
+      refreshSidebarBadge("team");
+      cargarEquipo();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Asistente IA — ProjectFlow</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  .ia-preguntas{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+  .ia-pregunta{font-weight:600;font-size:14px}
+  .ia-respuesta{font-size:14px;white-space:pre-wrap;margin-top:4px;color:var(--sub)}
+  .ia-reporte-card{border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:10px}
+  .ia-reporte-card p{white-space:pre-wrap;font-size:13px;margin:6px 0 0;color:var(--sub)}
+</style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar-slot"></aside>
+    <div class="main">
+      <header class="topbar" id="topbar-slot"></header>
+      <div class="page" id="page-slot"></div>
+    </div>
+  </div>
+  <script src="api.js"></script>
+  <script src="auth.js"></script>
+  <script src="common.js"></script>
+  <script>
+    const user = requireAuth();
+    const PROJECT_ID = new URLSearchParams(window.location.search).get("proyecto");
+    let PROYECTO = null;
+    let REPORTES = [];
+
+    function reporteCardHTML(r) {
+      return `
+        <div class="ia-reporte-card">
+          <div style="display:flex;align-items:center;gap:8px;justify-content:space-between">
+            <strong style="font-size:14px">${r.titulo}</strong>
+            ${badge(r.origen === "ia" ? "IA" : "Manual", r.origen === "ia" ? C.purple : C.info)}
+          </div>
+          <p>${r.descripcion || ""}</p>
+        </div>`;
+    }
+
+    function paginaHTML() {
+      return `
+        <a class="back-link" href="project.html?id=${PROJECT_ID}">${icon("chevronLeft", { size: 16 })}Volver al proyecto</a>
+        <div class="panel" style="margin-bottom:16px">
+          <div class="panel-head"><h2>Pregúntale al asistente</h2></div>
+          <p style="font-size:13px;color:${C.sub};margin:0 0 12px">Responde solo con datos reales de "${PROYECTO ? PROYECTO.nombre : ""}": tareas, avance, vencimientos y equipo.</p>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <button class="btn-accent" onclick="pedirResumen()">${icon("trending", { size: 14 })}Resumen de estado</button>
+            <button class="btn-ghost" onclick="generarReporte()">${icon("plus", { size: 14 })}Generar borrador de reporte</button>
+          </div>
+          <form onsubmit="preguntar(event)" style="display:flex;gap:8px">
+            <input type="text" id="ia-pregunta" placeholder="Ej: ¿qué tareas están vencidas?" required style="flex:1" />
+            <button type="submit" class="btn-accent">Preguntar</button>
+          </form>
+          <p class="form-error" id="ia-error"></p>
+          <div class="ia-preguntas" id="ia-preguntas"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>Reportes del proyecto</h2></div>
+          <div id="ia-reportes">${REPORTES.length ? REPORTES.map(reporteCardHTML).join("") : `<p style="color:${C.sub}">Todavía no hay reportes.</p>`}</div>
+        </div>`;
+    }
+
+    function agregarIntercambio(pregunta, respuestaHTML) {
+      const cont = document.getElementById("ia-preguntas");
+      cont.insertAdjacentHTML("afterbegin", `
+        <div>
+          <div class="ia-pregunta">${pregunta}</div>
+          <div class="ia-respuesta">${respuestaHTML}</div>
+        </div>`);
+    }
+
+    async function pedirResumen() {
+      document.getElementById("ia-error").textContent = "";
+      agregarIntercambio("Resumen de estado", loadingHTML("Pensando…"));
+      try {
+        const { resumen } = await api.ia.resumen(PROJECT_ID);
+        document.querySelector(".ia-respuesta").innerHTML = resumen;
+      } catch (err) {
+        document.querySelector(".ia-respuesta").innerHTML = `<span style="color:${C.risk}">${err.message}</span>`;
+      }
+    }
+
+    async function preguntar(e) {
+      e.preventDefault();
+      const input = document.getElementById("ia-pregunta");
+      const pregunta = input.value.trim();
+      if (!pregunta) return;
+      input.value = "";
+      agregarIntercambio(pregunta, loadingHTML("Pensando…"));
+      try {
+        const { respuesta } = await api.ia.preguntar(PROJECT_ID, pregunta);
+        document.querySelector(".ia-respuesta").innerHTML = respuesta;
+      } catch (err) {
+        document.querySelector(".ia-respuesta").innerHTML = `<span style="color:${C.risk}">${err.message}</span>`;
+      }
+    }
+
+    async function generarReporte() {
+      const errorEl = document.getElementById("ia-error");
+      errorEl.textContent = "";
+      try {
+        const reporte = await api.ia.generarReporte(PROJECT_ID);
+        REPORTES = [reporte, ...REPORTES];
+        document.getElementById("ia-reportes").innerHTML = REPORTES.map(reporteCardHTML).join("");
+      } catch (err) {
+        errorEl.textContent = err.message;
+      }
+    }
+
+    (async () => {
+      if (!user) return;
+      if (!PROJECT_ID) {
+        document.getElementById("page-slot").innerHTML = errorHTML(new Error("Falta el parámetro ?proyecto= en la URL."));
+        return;
+      }
+      initShell("projects", "Asistente de IA", "Preguntas y reportes basados en tus datos reales");
+      refreshSidebarBadge("projects");
+      document.getElementById("page-slot").innerHTML = loadingHTML("Cargando…");
+      try {
+        [PROYECTO, REPORTES] = await Promise.all([
+          api.proyectos.getById(PROJECT_ID),
+          api.ia.getReportes(PROJECT_ID),
+        ]);
+        document.getElementById("page-slot").innerHTML = paginaHTML();
+      } catch (err) {
+        document.getElementById("page-slot").innerHTML = errorHTML(err);
+      }
+    })();
+  </script>
+</body>
+</html>

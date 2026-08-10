@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Invitación — ProjectFlow</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="auth-shell">
+    <div class="auth-glow-a"></div><div class="auth-glow-b"></div>
+    <div class="auth-box">
+      <div class="auth-logo">
+        <div class="auth-logo-icon" id="logo-icon"></div>
+        <span>ProjectFlow</span>
+      </div>
+      <div class="auth-card" id="invite-card">
+        <h1>Invitación a un proyecto</h1>
+        <p class="sub" id="invite-sub">Cargando…</p>
+        <div id="invite-body"></div>
+      </div>
+    </div>
+  </div>
+  <script src="api.js"></script>
+  <script src="auth.js"></script>
+  <script src="common.js"></script>
+  <script>
+    document.getElementById("logo-icon").innerHTML = icon("folder", { size: 18, color: C.bg });
+    const TOKEN = new URLSearchParams(window.location.search).get("token");
+    const subEl = document.getElementById("invite-sub");
+    const bodyEl = document.getElementById("invite-body");
+
+    function formNuevaCuentaHTML(info) {
+      return `
+        <form id="accept-form">
+          <input type="hidden" value="${info.correo}" disabled style="display:none" />
+          <div class="field">${icon("mail", { size: 16, color: C.sub })}<input value="${info.correo}" disabled /></div>
+          <div class="field">${icon("user", { size: 16, color: C.sub })}<input name="nombre" placeholder="Tu nombre completo" required /></div>
+          <div class="field">${icon("lock", { size: 16, color: C.sub })}<input type="password" name="contrasena" placeholder="Crea una contraseña" required minlength="4" /></div>
+          <p class="auth-error" id="accept-error"></p>
+          <button type="submit" class="btn-primary" id="accept-submit">Crear cuenta y unirme ${icon("arrowRight", { size: 16 })}</button>
+        </form>`;
+    }
+
+    function botonUnirseHTML() {
+      return `
+        <p class="auth-error" id="accept-error"></p>
+        <button class="btn-primary" id="accept-submit" onclick="unirseConSesionActual()">Unirme al proyecto ${icon("arrowRight", { size: 16 })}</button>`;
+    }
+
+    function iniciarSesionHTML(correo) {
+      const redirect = encodeURIComponent(window.location.href);
+      return `
+        <p style="font-size:14px;color:${C.sub};margin-bottom:16px">
+          Ya existe una cuenta con el correo <strong>${correo}</strong>. Inicia sesión con esa cuenta para aceptar la invitación.
+        </p>
+        <a class="btn-primary" style="display:inline-flex" href="login.html?redirect=${redirect}">Iniciar sesión ${icon("arrowRight", { size: 16 })}</a>`;
+    }
+
+    async function unirseConSesionActual() {
+      const errorEl = document.getElementById("accept-error");
+      errorEl.textContent = "";
+      try {
+        const data = await api.invitaciones.aceptar(TOKEN, {});
+        saveSession(data.token, data.usuario);
+        window.location.href = "dashboard.html";
+      } catch (err) {
+        errorEl.textContent = err.message;
+      }
+    }
+
+    (async () => {
+      if (!TOKEN) {
+        subEl.textContent = "Falta el token de invitación en el enlace.";
+        return;
+      }
+      try {
+        const info = await api.invitaciones.consultar(TOKEN);
+        const rolTexto = info.rol_proyecto === "lider" ? "líder" : "colaborador";
+        subEl.textContent = `${info.invitado_por_nombre} te invitó a unirte a "${info.proyecto_nombre}" como ${rolTexto}.`;
+
+        if (info.requiere_cuenta_nueva) {
+          bodyEl.innerHTML = formNuevaCuentaHTML(info);
+          document.getElementById("accept-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const errorEl = document.getElementById("accept-error");
+            const btn = document.getElementById("accept-submit");
+            errorEl.textContent = "";
+            btn.disabled = true;
+            try {
+              const data = await api.invitaciones.aceptar(TOKEN, {
+                nombre: form.nombre.value.trim(),
+                contrasena: form.contrasena.value,
+              });
+              saveSession(data.token, data.usuario);
+              window.location.href = "dashboard.html";
+            } catch (err) {
+              errorEl.textContent = err.message;
+              btn.disabled = false;
+            }
+          });
+        } else {
+          const session = getSession();
+          const sesionCoincide = session && !tokenExpirado(session.token) && session.usuario.correo === info.correo;
+          bodyEl.innerHTML = sesionCoincide ? botonUnirseHTML() : iniciarSesionHTML(info.correo);
+        }
+      } catch (err) {
+        subEl.textContent = err.message;
+      }
+    })();
+  </script>
+</body>
+</html>
