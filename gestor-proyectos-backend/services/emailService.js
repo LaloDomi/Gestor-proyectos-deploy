@@ -1,31 +1,20 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
-const GMAIL_USER = process.env.GMAIL_USER;
-const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
-const FROM_NAME = process.env.GMAIL_SENDER_NAME || "ProjectFlow";
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const RESEND_FROM = process.env.RESEND_FROM || "onboarding@resend.dev";
 
 const FRONTEND_URL = (
   process.env.FRONTEND_URL || "http://localhost:5500"
 ).replace(/\/$/, "");
 
-const transporter =
-  GMAIL_USER && GMAIL_APP_PASSWORD
-    ? nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 587,
-        secure: false,
-        family: 4,
-        auth: {
-          user: GMAIL_USER,
-          pass: GMAIL_APP_PASSWORD,
-        },
-      })
-    : null;
+const resend = RESEND_API_KEY
+  ? new Resend(RESEND_API_KEY)
+  : null;
 
 async function enviarCorreo({ to, subject, html }) {
-  if (!transporter) {
+  if (!resend) {
     console.log(
-      `[emailService] GMAIL_USER/GMAIL_APP_PASSWORD no configurados — correo no enviado a ${to}: "${subject}"`
+      `[emailService] RESEND_API_KEY no configurada — correo no enviado a ${to}: "${subject}"`
     );
 
     return {
@@ -35,15 +24,32 @@ async function enviarCorreo({ to, subject, html }) {
   }
 
   try {
-    await transporter.sendMail({
-      from: `"${FROM_NAME}" <${GMAIL_USER}>`,
-      to,
+    const { data, error } = await resend.emails.send({
+      from: RESEND_FROM,
+      to: [to],
       subject,
       html,
     });
 
+    if (error) {
+      console.error(
+        `[emailService] Error de Resend al enviar correo a ${to}:`,
+        error
+      );
+
+      return {
+        enviado: false,
+        motivo: error.message || "Error de Resend",
+      };
+    }
+
+    console.log(
+      `[emailService] Correo enviado correctamente a ${to}. ID: ${data?.id}`
+    );
+
     return {
       enviado: true,
+      id: data?.id,
     };
   } catch (err) {
     console.error(
@@ -64,13 +70,21 @@ exports.enviarVerificacion = (usuario, token) =>
     subject: "Verifica tu correo — ProjectFlow",
     html: `
       <p>Hola ${usuario.nombre},</p>
-      <p>Confirma tu correo en ProjectFlow haciendo clic en el siguiente enlace:</p>
+
+      <p>
+        Confirma tu correo en ProjectFlow haciendo clic
+        en el siguiente enlace:
+      </p>
+
       <p>
         <a href="${FRONTEND_URL}/verify-email.html?token=${token}">
           Verificar mi correo
         </a>
       </p>
-      <p>Si tú no creaste esta cuenta, ignora este mensaje.</p>
+
+      <p>
+        Si tú no creaste esta cuenta, ignora este mensaje.
+      </p>
     `,
   });
 
@@ -82,13 +96,20 @@ exports.enviarInvitacion = (
     to: correoDestino,
     subject: `${invitadorNombre} te invitó a "${proyectoNombre}" en ProjectFlow`,
     html: `
-      <p>${invitadorNombre} te invitó a colaborar en el proyecto "${proyectoNombre}" en ProjectFlow.</p>
+      <p>
+        ${invitadorNombre} te invitó a colaborar en el proyecto
+        "${proyectoNombre}" en ProjectFlow.
+      </p>
+
       <p>
         <a href="${FRONTEND_URL}/invite-accept.html?token=${token}">
           Ver invitación y unirme
         </a>
       </p>
-      <p>Este enlace vence en 7 días.</p>
+
+      <p>
+        Este enlace vence en 7 días.
+      </p>
     `,
   });
 
@@ -97,10 +118,14 @@ exports.enviarDigestoVencimientos = (usuario, items) =>
     to: usuario.correo,
     subject: `Tienes ${items.length} pendiente(s) en ProjectFlow`,
     html: `
-      <p>Hola ${usuario.nombre}, esto es lo que se acerca o ya venció:</p>
+      <p>
+        Hola ${usuario.nombre}, esto es lo que se acerca o ya venció:
+      </p>
+
       <ul>
-        ${items.map((texto) => `${texto}`).join("")}
+        ${items.map((texto) => `<li>${texto}</li>`).join("")}
       </ul>
+
       <p>
         <a href="${FRONTEND_URL}/notifications.html">
           Ver todas mis notificaciones
